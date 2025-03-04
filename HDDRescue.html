@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hard Drive Rescue</title>
+    <style>
+        body {
+            cursor: none;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #1e1e1e;
+            color: white;
+            overflow: hidden;
+        }
+        #custom-cursor {
+      position: absolute;
+      width: 40px; /* adjust size as needed */
+      height: 40px;
+      z-index: 999;
+      background: url('cursor.png') no-repeat center center;
+      background-size: contain;
+      pointer-events: none; /* allows clicks through the element */
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+        h1 {
+            margin-top: 20px;
+        }
+        #game-container {
+            display: grid;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .block {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+        .valid { background-color: green; }
+        .corrupt { background-color: red; }
+        .corrupt:hover { background-color: rgb(170, 15, 15)}
+        .neutral { background-color: gray; }
+        #scoreboard {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        #timer {
+            margin-top: 10px;
+            font-size: 20px;
+        }
+        #game-over {
+            display: none;
+            font-size: 30px;
+            color: red;
+            margin-top: 20px;
+        }
+        #level {
+            margin-top: 10px;
+            font-size: 20px;
+        }
+        #win {
+            display: none;
+            font-size: 30px;
+            color: green;
+            margin-top: 20px;
+        }
+        #start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            z-index: 10;
+        }
+        #start-image {
+            width: 600px;
+            height: auto;
+            border-radius: 10px;
+            margin-bottom: 2px;
+        }
+        #start-text {
+            font-size: 24px;
+            max-width: 500px;
+            margin-bottom: 20px;
+            text-align: justify;
+            margin: 10px;
+        }
+        #start-button {
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: green;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            position: absolute;
+            left: 80%;
+            top: 90%;
+        }
+        #start-button:hover {
+            background-color: darkgreen;
+        }
+        .textbox{
+            border: 2px solid white;
+            background-color: rgb(52, 93, 24);
+            margin-right: 20%;
+
+        }
+        #info-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white;
+    z-index: 20;
+    display: none; /* Initially hidden */
+}
+
+#info-box {
+    background: #222;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%; /* Limit the width */
+    max-width: 600px; /* Max width for large screens */
+    box-sizing: border-box; /* Ensure padding doesn't affect width */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center; /* Center content */
+}
+
+#info-ok-button {
+    padding: 10px 20px;
+    font-size: 18px;
+    background-color: green;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#info-ok-button:hover {
+    background-color: darkgreen;
+}
+
+    </style>
+</head>
+<body>
+    <div id="custom-cursor"></div>
+
+    <div id="start-screen">
+        <img id="start-image" src="avatars-removebg-preview.png" alt="Game Image">
+        <div class="textbox">
+            <div id="start-text">Лошите сектори на твърдия диск (HDD) представляват повредени участъци, които не могат да бъдат прочетени или записани правилно. Те могат да бъдат резултат от физически увреждания, износване на магнитния слой или софтуерни грешки. Навременното им откриване и предприемане на мерки може да помогне за предотвратяване на загуба на данни и повреда на диска.</div>
+            <img src="badsectors.png">
+        </div>
+        <button id="start-button">Start Game</button>
+        <div class="textbox" id="infoscreen"></div>
+    </div>
+
+    <h1>Hard Drive Rescue</h1>
+    <p>Shoot the red corrupt blocks before they spread! Avoid hitting valid (green) blocks!</p>
+    <div id="scoreboard">Score: <span id="score">0</span></div>
+    <div id="level">Level: <span id="level-num">1</span></div>
+    <div id="timer">Time: <span id="time-left">60</span>s</div>
+    <div id="game-container"></div>
+    <div id="game-over">💀 GAME OVER! Your hard drive is corrupted! 💀</div>
+    <div id="win">🎉 YOU WON! All corruption cleared! 🎉</div>
+
+    <div id="info-screen">
+        <div id="info-box">
+            <h2 id="info-title">Level Info</h2>
+            <p id="info-text">Prepare for the next challenge!</p>
+            <button id="info-ok-button">Continue</button>
+        </div>
+    </div>
+    <script>
+        let timerInterval; 
+        let gridSize = 5; // Initial grid size (5x5)
+        const grid = [];
+        let score = 0;
+        let gameOver = false;
+        let level = 1;
+        let timeLeft = 60;
+        let corruptionSpeed = 3000; // Starting spread speed (3 seconds)
+        let blocksCleared = 0; // Counter for cleared corrupted blocks
+        const pointsForLevelUp = 60; // Points required for level up (for first 2 levels)
+        const maxLevel = 3; // Maximum number of levels
+        const baseCorruptionSpeed = 2000; // Base speed for corruption (in ms)
+        const level3CorruptionSpeed = 5000; // Slow speed for corruption in level 3 (slower spread)
+        const level3WinPoints = 200; // Points required to win on level 3
+
+        const container = document.getElementById("game-container");
+        const scoreDisplay = document.getElementById("score");
+        const timerDisplay = document.getElementById("time-left");
+        const gameOverMessage = document.getElementById("game-over");
+        const levelDisplay = document.getElementById("level-num");
+        const winMessage = document.getElementById("win");
+        const startScreen = document.getElementById("start-screen");
+        const informationScreen = document.getElementById("info-screen");
+
+        // Initialize the grid
+        const customCursor = document.getElementById('custom-cursor');
+    let angle = 0; // starting rotation angle
+
+    document.addEventListener('mousemove', (e) => {
+      // Position the custom cursor at the mouse coordinates
+      customCursor.style.left = `${e.clientX}px`;
+      customCursor.style.top = `${e.clientY}px`;
+
+      // Increment the rotation angle slightly on each move
+      angle += 10; // Increase angle by 1 degree (adjust for speed)
+      
+      // Apply the new rotation while maintaining centered translation
+      customCursor.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    });
+        function createGrid() {
+            grid.length = 0; // Clear previous grid blocks
+            container.innerHTML = ''; // Clear grid container
+
+            // Adjust the container's CSS grid columns
+            container.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`; // Set columns based on grid size
+
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const block = document.createElement("div");
+                block.classList.add("block", "neutral");
+                block.dataset.index = i;
+                block.addEventListener("click", shootBlock);
+                container.appendChild(block);
+                grid.push(block);
+            }
+            spreadCorruption(); // Start corruption
+        }
+
+        // Randomly infect some blocks to start
+        function spreadCorruption() {
+    if (gameOver) return;
+
+    // Stop spreading corruption if we win
+    if (level > maxLevel) {
+        return; // No need to spread corruption once all levels are complete
+    }
+
+    // Spread corruption based on the level
+    const cleanBlocks = grid.filter(b => b.classList.contains("neutral"));
+    if (cleanBlocks.length > 0) {
+        const randomBlock = cleanBlocks[Math.floor(Math.random() * cleanBlocks.length)];
+        randomBlock.classList.remove("neutral");
+        randomBlock.classList.add("corrupt");
+    }
+
+    // Add valid blocks (green)
+    addValidData();
+
+    // Check if corruption spreads too much
+    if (checkGameOver()) {
+        gameOver = true;
+        gameOverMessage.style.display = "block";
+        stopTimer();
+        return;
+    }
+
+    // Adjust spread speed based on the current level
+    const levelCorruptionSpeed = level === 3 ? level3CorruptionSpeed : corruptionSpeed;
+
+    // Store the timeout ID for the next spread
+    corruptionTimeout = setTimeout(spreadCorruption, levelCorruptionSpeed);
+}
+
+        // Shooting mechanic
+        function shootBlock(event) {
+            if (gameOver) return;
+
+            const block = event.target;
+            if (block.classList.contains("corrupt")) {
+                block.classList.remove("corrupt");
+                block.classList.add("neutral");
+                score += 10;
+                blocksCleared++;
+            } else if (block.classList.contains("valid")) {
+                score -= 5; // Penalty for hitting valid data
+            }
+            scoreDisplay.textContent = score;
+
+            // Check for level-up
+            if (score >= pointsForLevelUp * level && level < 3) {
+                turnAllBlocksGreen();
+                nextLevel();
+            }
+            
+
+            // Check if on level 3, 80 points reached, and win
+            if (level === 3 && score >= level3WinPoints) {
+                turnAllBlocksGreen(); // Turn all blocks green when the player wins level 3
+                winGame();
+            }
+        }
+
+        // Randomly assign valid data blocks
+        function addValidData() {
+            const neutralBlocks = grid.filter(b => b.classList.contains("neutral"));
+            for (let i = 0; i < 5; i++) { // 5 valid blocks
+                if (neutralBlocks.length === 0) break;
+                const randomBlock = neutralBlocks[Math.floor(Math.random() * neutralBlocks.length)];
+                randomBlock.classList.remove("neutral");
+                randomBlock.classList.add("valid");
+            }
+        }
+
+        // Check if game is over (too much corruption)
+        function checkGameOver() {
+            const corruptBlocks = grid.filter(b => b.classList.contains("corrupt"));
+            return corruptBlocks.length > 15; // Game over if more than 15 corrupted blocks
+        }
+
+        // Move to the next level
+        function nextLevel() {
+            if (level >= maxLevel) {
+                return;
+            }
+            
+            level++;
+            blocksCleared = 0; // Reset the cleared block counter
+            levelDisplay.textContent = level;
+            showInfoScreen();
+            // Increase grid size for each level
+            gridSize++; // Increase grid size (from 5x5 to 6x6, etc.)
+            corruptionSpeed = Math.max(baseCorruptionSpeed - (level * 20), 500); // Slow down corruption spread slightly
+            createGrid(); // Create a new grid with the increased size
+
+        }
+
+        function showInfoScreen() {
+    const infoScreen = document.getElementById("info-screen");
+    const infoTitle = document.getElementById("info-title");
+    const infoText = document.getElementById("info-text");
+    
+    // Set the title and text based on the level
+    if (level === 2) {
+        infoTitle.textContent = "Level 2: Corruption Spreading!";
+        infoText.textContent = "The bad sectors are spreading faster! Be careful and act quickly!";
+    } else if (level === 3) {
+        infoTitle.textContent = "Final Level: Save Your Hard Drive!";
+        infoText.textContent = "This is your final challenge! If you clear enough corruption, you will win!";
+    }
+
+    // Show the info screen
+    infoScreen.style.display = "flex";  
+    infoScreen.style.opacity = "1"; 
+
+    // Pause the timer and corruption
+    stopTimer();
+    clearTimeout(corruptionTimeout); // Stop the corruption spread
+
+    if (level === 2) {
+        corruptionSpeed = Math.max(baseCorruptionSpeed - (level * 50), 1000);}
+    // Add event listener for the "Continue" button
+    const infoOkButton = document.getElementById("info-ok-button");
+    infoOkButton.onclick = () => {
+        infoScreen.style.display = "none";  // Hide the info screen
+        createGrid();
+        countdown(); // Resume the timer
+    };
+}
+let corruptionTimeout;
+
+        // Winning the game
+        function winGame() {
+            gameOver = true;
+            stopTimer();
+            winMessage.style.display = "block";
+        }
+
+        // Turn all blocks green when the player wins level 3
+        function turnAllBlocksGreen() {
+            grid.forEach(block => {
+                block.classList.remove("corrupt", "neutral");
+                block.classList.add("valid");
+            });
+        }
+
+        // Countdown timer function
+        function countdown() {
+    if (gameOver) return;
+
+    timeLeft--;
+    timerDisplay.textContent = timeLeft;
+
+    if (timeLeft === 0) {
+        gameOver = true;
+        gameOverMessage.textContent = "💀 TIME'S UP! Your hard drive is corrupted! 💀";
+        gameOverMessage.style.display = "block";
+        stopTimer();
+    } else {
+        timerInterval = setTimeout(countdown, 1000); // Store the timeout ID
+    }
+}
+
+
+        // Stop the timer
+        function stopTimer() {
+    clearTimeout(timerInterval); // Clear the timeout using the stored ID
+}
+
+        // Start the game
+    // Start the countdown timer
+        function startGame() {
+    startScreen.style.display = "none";
+    document.getElementById("scoreboard").style.display = "block";
+    document.getElementById("timer").style.display = "block";
+    document.getElementById("level").style.display = "block";
+    container.style.opacity = 1;
+    createGrid();
+    countdown(); // Start the countdown timer
+}
+
+        document.getElementById("start-button").addEventListener("click", startGame);
+    </script>
+</body>
+</html>

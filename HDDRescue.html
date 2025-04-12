@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Спаси Хард Диска</title>
+    <style>
+        body{
+            cursor: none;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #000000;
+            color: white;
+            overflow: hidden;
+        }
+        #custom-cursor{
+            position: absolute;
+            width: 40px; 
+            height: 40px;
+            z-index: 999;
+            background: url('cursor.png') no-repeat center center;
+            background-size: contain;
+            pointer-events: none; 
+            transform: translate(-50%, -50%) rotate(0deg);
+        }
+        h1{
+            margin-top: 20px;
+            font-family: Custom;
+            font-size: 7vh;
+        }
+        #game-container{
+            display: grid;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .block{
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            transition: 0.2s;
+        }
+        .valid{background-color: green;}
+        .corrupt{background-color: red;}
+        .corrupt:hover{background-color: rgb(170, 15, 15)}
+        .neutral{background-color: gray;}
+        #scoreboard{
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        #timer{
+            margin-top: 10px;
+            font-size: 20px;
+        }
+        #game-over{
+            display: none;
+            font-size: 30px;
+            color: red;
+            margin-top: 20px;
+        }
+        #level{
+            margin-top: 10px;
+            font-size: 20px;
+        }
+        #win{
+            display: none;
+            font-size: 30px;
+            color: green;
+            margin-top: 20px;
+        }
+        #start-screen{
+            background: url(background.jpg);
+            position: absolute;
+            top: 20;
+            left: 10;
+            width: 110%;
+            height: 110%;
+            background: rgba(224, 205, 205);
+            text-align: center;
+            color: white;
+            z-index: 10;}
+        #start-screen{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            position: relative; 
+            overflow: hidden; 
+        } 
+        #start-screen::before{
+            content: ""; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw; 
+            height: 100vh; 
+            background-image: url('background.jpg'); 
+            background-size: auto;
+            background-repeat: repeat;
+            background-position: center;
+            z-index: -1; 
+            animation: moveBg 30s linear infinite;
+        }
+        @keyframes moveBg{
+            0% { background-position: 0 0; 
+            opacity: 70%;
+        filter:grayscale(30%)}
+            50% { background-position: -200px 0px;
+            opacity: 30%;
+        filter: grayscale(100%); }
+            100%{background-position: 0 0; 
+                opacity: 70%;}
+        }
+        @keyframes changeColor{
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+        #combo{
+            background-color: rgba(26, 27, 71, 0.7);
+            border-radius: 10%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 85vh;
+            width: 33vw;
+            margin-top: 5%;
+            margin-bottom: 7%;
+            box-shadow: 0 0 15px 5px rgb(255, 255, 255), rgb(255, 255, 255) 0px 0px 30px 3px inset;
+        }
+        .text{
+            width: 80%;
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+            font-size: 3.0vh;;
+        }
+        p{
+            text-shadow: 0px 0px 10px  #d7c8c8;
+            text-align: justify;
+        }
+        #sectors{
+            height: 35vh;
+            width: 17vw;
+            box-shadow: 0 0 20px 5px black;
+        }
+        #start-button{
+            background-color: rgb(40, 63, 8, 0.2);
+            margin-top: 1vh;
+            height: 7vh;
+            width: 14vw;
+            margin-bottom: 2vh;
+            border-radius: 1.5vh;
+            color: white;
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+            letter-spacing: 0.25vw;
+            font-size: 3.0vh;
+            transition: 0.2s ease-in;
+        }
+        #start-button:hover{
+            background-color: rgb(25, 65, 145, 0.7);
+        }
+        #avatar{
+            height: 70%;
+            margin-top:15%;
+            margin-left: 15%;
+        }
+        #info-screen{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            color: white;
+            z-index: 20;
+            display: none; 
+        }
+        #info-box{
+            background: #222;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%; 
+            max-width: 600px; 
+            box-sizing: border-box; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center; 
+        }
+        #info-text{
+            font-size: 20px;
+            width: 400px;
+        }
+        #info-image{
+            width: 450px;
+            height: 350px;
+        }
+        #info-ok-button{
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: green;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #info-ok-button:hover{
+            background-color: darkgreen;
+        }
+        @font-face{
+            font-family: '';
+            src: url('TT Berlins Trial Groteski.otf') format('opentype');
+        }
+        span{
+            font-family: 'Custom';
+        }
+        #scoreboard, #level, #timer{
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+        }
+        #game-over, #win{
+            font-family: Custom;
+        }
+        #title{
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+            position:absolute;
+            left: 5%;
+            top: 15%;
+            z-index: 999;
+            box-shadow: 5px 5px 20px 5px   rgba(0, 0, 0, 0.6);
+            width: 40%;
+        }
+    </style>
+</head>
+<body>
+    <div id="custom-cursor"></div>
+    <audio id="bg-music" loop>
+        <source src="so-happy-with-my-8-bit-game-301275.mp3" type="audio/mpeg"></audio>
+        <audio id="shoot-sound">
+            <source src="shoot02wav-14562.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="shoot-valid">
+            <source src="game-teleport-90735.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sound-win">
+            <source src="success_bell-6776.mp3" type="audio/mpeg">
+        </audio>
+        <h1 id="title">СПАСИ ХАРД ДИСКА</h1>
+    <div id="start-screen">
+        <img id="avatar" src="DALL_E_2025-03-07_09.15.21_-_A_full-height_pixel_art_character_with_mid-short_curly_hair__presenting_something_with_one_hand__as_if_showing_a_big_screen._The_character_has_a_frien-removebg-preview.png">
+        <div id="combo">
+            <div class="text">
+                <p>Лошите сектори на твърдия диск (HDD) представляват повредени участъци, които не могат да бъдат прочетени или записани правилно. Те могат да бъдат резултат от физически увреждания, износване на магнитния слой или софтуерни грешки. Навременното им откриване и предприемане на мерки може да помогне за предотвратяване на загуба на данни и повреда на диска.</p>
+            </div>
+            <img id="sectors" src="badsectors.png">
+            <button id="start-button">Започни игра</button>
+        </div>
+    </div>
+        <div class="textbox" id="infoscreen"></div>
+        </div>
+    </div>
+    <h1>Спаси Хард Диска</h1>
+    <h2>Цели червените квадрати, и избягвай зелените!</h2>
+    <div id="scoreboard">Точки: <span id="score">0</span></div>
+    <div id="level">Ниво: <span id="level-num">1</span></div>
+    <div id="timer">Оставащо време: <span id="time-left">60</span>s</div>
+    <div id="game-container"></div>
+    <div id="game-over">💀 Край на играта! Ти загуби! 💀</div>
+    <div id="win">🎉 Ти спечели! Успч да спасиш Хард Диска! 🎉</div>
+    <div id="info-screen">
+        <div id="info-box">
+            <h2 id="info-title">Интересна информация</h2>
+            <p id="info-text">Приготви се за следващото ниво! Ще стане по-бързо!</p>
+            <img id="info-image" src="info.png">
+            <button id="info-ok-button">Продължи</button>
+        </div>
+    </div>
+    <script>
+        let timerInterval; 
+        let gridSize = 5;
+        const grid = [];
+        let score = 0;
+        let gameOver = false;
+        let level = 1;
+        let timeLeft = 60;
+        let corruptionSpeed = 3000; 
+        let blocksCleared = 0; 
+        const pointsForLevelUp = 60; 
+        const maxLevel = 3;
+        const baseCorruptionSpeed = 2000; 
+        const level3CorruptionSpeed = 5000; 
+        const level3WinPoints = 200; 
+        const container = document.getElementById("game-container");
+        const scoreDisplay = document.getElementById("score");
+        const timerDisplay = document.getElementById("time-left");
+        const gameOverMessage = document.getElementById("game-over");
+        const levelDisplay = document.getElementById("level-num");
+        const winMessage = document.getElementById("win");
+        const startScreen = document.getElementById("start-screen");
+        const informationScreen = document.getElementById("info-screen");
+        const customCursor = document.getElementById('custom-cursor');
+    let angle = 0; 
+    document.addEventListener('mousemove', (e) => {
+      customCursor.style.left = `${e.clientX}px`;
+      customCursor.style.top = `${e.clientY}px`;
+      angle += 10; 
+      customCursor.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    });
+        function createGrid() {
+            grid.length = 0; 
+            container.innerHTML = ''; 
+            container.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`; 
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const block = document.createElement("div");
+                block.classList.add("block", "neutral");
+                block.dataset.index = i;
+                block.addEventListener("click", shootBlock);
+                container.appendChild(block);
+                grid.push(block);
+            }
+            spreadCorruption(); 
+        } 
+        function spreadCorruption() {
+    if (gameOver) return;
+    if (level > maxLevel) {
+        return; 
+    }
+    const cleanBlocks = grid.filter(b => b.classList.contains("neutral"));
+    if (cleanBlocks.length > 0) {
+        const randomBlock = cleanBlocks[Math.floor(Math.random() * cleanBlocks.length)];
+        randomBlock.classList.remove("neutral");
+        randomBlock.classList.add("corrupt");
+    }
+    addValidData();
+    if (checkGameOver()) {
+        gameOver = true;
+        gameOverMessage.style.display = "block";
+        stopTimer();
+        return;
+    }
+    const levelCorruptionSpeed = level === 3 ? level3CorruptionSpeed : corruptionSpeed;
+    corruptionTimeout = setTimeout(spreadCorruption, levelCorruptionSpeed);
+}
+        function shootBlock(event) {
+            if (gameOver) return;
+
+            const block = event.target;
+            if (block.classList.contains("corrupt")) {
+                block.classList.remove("corrupt");
+                block.classList.add("neutral");
+                playShootSound();
+                score += 10;
+                blocksCleared++;
+            } else if (block.classList.contains("valid")) {
+                score -= 5;
+                playShootSoundValid(); 
+            }
+            scoreDisplay.textContent = score;
+            if (score >= pointsForLevelUp * level && level < 3) {
+                turnAllBlocksGreen();
+                nextLevel();
+            }
+            if (level === 3 && score >= level3WinPoints) {
+                turnAllBlocksGreen(); 
+                winGame();
+            }
+        }
+        function addValidData() {
+            const neutralBlocks = grid.filter(b => b.classList.contains("neutral"));
+            for (let i = 0; i < 5; i++) { 
+                if (neutralBlocks.length === 0) break;
+                const randomBlock = neutralBlocks[Math.floor(Math.random() * neutralBlocks.length)];
+                randomBlock.classList.remove("neutral");
+                randomBlock.classList.add("valid");
+            }
+        }
+        function checkGameOver() {
+            const corruptBlocks = grid.filter(b => b.classList.contains("corrupt"));
+            return corruptBlocks.length > 15; 
+        }
+        function nextLevel() {
+            if (level >= maxLevel) {
+                return;
+            }
+            level++;
+            blocksCleared = 0; 
+            levelDisplay.textContent = level;
+            showInfoScreen();
+            gridSize++; 
+            corruptionSpeed = Math.max(baseCorruptionSpeed - (level * 20), 500); 
+            createGrid(); 
+        }
+        function showInfoScreen() {
+    const infoScreen = document.getElementById("info-screen");
+    const infoTitle = document.getElementById("info-title");
+    const infoText = document.getElementById("info-text");
+    const infoImage = document.getElementById("info-image");
+    if (level === 2) {
+        infoTitle.textContent = "Level 2: Corruption Spreading!";
+        infoText.textContent = "Тези програми работят в няколко стъпки: сканиране, поправка и изолиране. Един от методите за поправка е презаписване на секторите с нули, което изтрива грешните данни и принуждава диска да ги презапише коректно. Ако това не помогне, софтуерът блокира проблемните сектори, за да предотврати бъдещи грешки.";
+        infoImage.src = '0s.png'
+    } else if (level === 3) {
+        infoTitle.textContent = "Final Level: Save Your Hard Drive!";
+        infoText.textContent = "а да се избегнат лоши сектори, се препоръчва редовна проверка с CHKDSK, fsck, HDD Regenerator и други инструменти. Избягването на внезапни изключвания и удари също помага. Ако физическите повреди се увеличават, най-доброто решение е смяна на диска.";
+        infoImage.src = 'bad.jpg'
+    }
+    infoScreen.style.display = "flex";  
+    infoScreen.style.opacity = "1"; 
+    stopTimer();
+    clearTimeout(corruptionTimeout); 
+    if (level === 2) {
+        corruptionSpeed = Math.max(baseCorruptionSpeed - (level * 50), 1000);}
+    const infoOkButton = document.getElementById("info-ok-button");
+    infoOkButton.onclick = () => {
+        infoScreen.style.display = "none";  
+        createGrid();
+        countdown(); 
+    };
+}
+let corruptionTimeout;
+        function winGame() {
+    gameOver = true;
+    stopTimer();
+    winMessage.style.display = "block";
+    let bgMusic = document.getElementById("bg-music");
+    bgMusic.pause(); 
+    bgMusic.currentTime = 0; 
+    playSoundWin(); 
+}
+        function turnAllBlocksGreen() {
+            grid.forEach(block => {
+                block.classList.remove("corrupt", "neutral");
+                block.classList.add("valid");
+            });
+        }
+        function countdown() {
+    if (gameOver) return;
+    timeLeft--;
+    timerDisplay.textContent = timeLeft;
+    if (timeLeft === 0) {
+        gameOver = true;
+        gameOverMessage.textContent = "💀 TIME'S UP! Your hard drive is corrupted! 💀";
+        gameOverMessage.style.display = "block";
+        stopTimer();
+    } else {
+        timerInterval = setTimeout(countdown, 1000); 
+    }
+}
+        function stopTimer() {
+    clearTimeout(timerInterval); 
+}
+        function startGame() {
+        document.getElementById("title").style.display = "none";
+    startScreen.style.display = "none";
+    document.getElementById("scoreboard").style.display = "block";
+    document.getElementById("timer").style.display = "block";
+    document.getElementById("level").style.display = "block";
+    container.style.opacity = 1;
+    createGrid();
+    countdown(); 
+}
+        document.getElementById("start-button").addEventListener("click", startGame);
+        window.addEventListener("load", function() {
+        let music = document.getElementById("bg-music");
+        let shoot = document.getElementById("shoot-sound");
+        let playMusic = (audio) => {
+            audio.volume = 0.2; 
+            audio.play().catch(() => {
+                console.log("Autoplay blocked, waiting for user interaction.");
+            });
+        };
+        playMusic(music); 
+        document.body.addEventListener("click", function() {
+            playMusic(music); 
+        }, { once: true }); 
+    });
+    function playShootSound() {
+    let shoot = document.getElementById("shoot-sound");
+    shoot.volume = 0.2; 
+    shoot.currentTime = 0; 
+    shoot.play().catch(error => {
+        console.error("Error playing shoot sound:", error);
+    }); 
+}
+function playShootSoundValid() {
+    let shoot = document.getElementById("shoot-valid");
+    shoot.volume = 0.2; 
+    shoot.currentTime = 0; 
+    shoot.play().catch(error => {
+        console.error("Error playing shoot sound:", error);
+    }); 
+}
+shoot.play().catch(error => {
+        console.error("Error playing shoot sound:", error);
+    }); 
+function playSoundWin() {
+    let shoot = document.getElementById("sound-win");
+    shoot.volume = 0.4; 
+    shoot.currentTime = 0; 
+    
+    shoot.play().catch(error => {
+        console.error("Error playing shoot sound:", error);
+    }); 
+}
+    </script>
+</body>
+</html>
